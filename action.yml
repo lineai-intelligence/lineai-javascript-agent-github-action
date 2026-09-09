@@ -1,0 +1,65 @@
+name: 'Lineai JavaScript Agent'
+description: 'Scans JavaScript/TypeScript source into your Lineai server.'
+
+branding:
+  icon: 'share-2'
+  color: 'blue'
+
+inputs:
+  lineai_host:
+    description: 'The host address of the Lineai instance (e.g. https://mycompany.app.lineai.net), with no path suffix — the agent appends the API mount point (/api) itself.'
+    required: true
+  agent_uuid:
+    description: 'The UUID of the Agent in Lineai.'
+    required: true
+  agent_password:
+    description: 'The password for the agent.'
+    required: true
+  application_name:
+    description: 'The Application node to create that will be the parent of all objects found in the scan.'
+    required: true
+  scan_space:
+    description: 'The name of the scan space that the data will be saved to. If specified, a ScanSpace with this name will be created if not found. If not specified, information will be saved to the default ScanSpace.'
+    required: false
+  scan_path:
+    description: 'The path of the file or directory to scan. Must start with /github/workspace/'
+    default: "/github/workspace"
+    required: false
+  entrypoint_type:
+    description: 'How scan entry points are discovered: recursive, package, or file. Maps to --entrypoint-type.'
+    default: "recursive"
+    required: false
+  dependency_depth:
+    description: 'How many levels of node_modules dependencies to follow (default 3; 0 = root package only, -1 = unlimited). Maps to --dependency-depth.'
+    required: false
+  expand_imports:
+    description: 'Expand imported files before analysis (heavier, more nodes per file). Maps to --expand-imports.'
+    default: 'false'
+    required: false
+  force_rescan:
+    description: 'Forces the agent to rescan already scanned artifacts.'
+    default: 'false'
+    required: false
+  expunge_scan_sessions:
+    description: 'Instruct the server to delete all other scan sessions created by this agent and its configuration after the current scan session has completed successfully.'
+    default: 'false'
+    required: false
+
+runs:
+  using: 'docker'
+  image: docker://lineaipublic.azurecr.io/lineai_javascript:latest
+  args: [
+    "analyze",
+    "--path=${{ inputs.scan_path }}",
+    "--application=${{ inputs.application_name }}",
+    "--entrypoint-type=${{ inputs.entrypoint_type }}",
+    "${{ inputs.scan_space != null && format('--scan-space-name={0}', inputs.scan_space) || null }}",
+    "${{ inputs.dependency_depth != null && format('--dependency-depth={0}', inputs.dependency_depth) || null }}",
+    "${{ inputs.expand_imports == 'true' && '--expand-imports' || null }}",
+    "${{ inputs.force_rescan == 'true' && '--rescan' || null }}",
+    "${{ inputs.expunge_scan_sessions == 'true' && '-e' || null }}"
+  ]
+  env:
+    LINEAI_HOST: ${{ inputs.lineai_host }}
+    AGENT_UUID: ${{ inputs.agent_uuid }}
+    AGENT_PASSWORD: ${{ inputs.agent_password }}
